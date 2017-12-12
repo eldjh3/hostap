@@ -1253,7 +1253,8 @@ static void usage(void)
 	       "           [-M<client MAC address>] [-o<server cert file] \\\n"
 	       "           [-N<attr spec>] [-R<PC/SC reader>] "
 	       "[-P<PC/SC PIN>] \\\n"
-	       "           [-A<client IP>] [-i<ifname>] [-T<ctrl_iface>]\n"
+	       "           [-A<client IP>] [-i<ifname>] [-T<ctrl_iface>] \\\n"
+	       "           [-u<identity>] [-z<password>] \n"
 	       "eapol_test scard\n"
 	       "eapol_test sim <PIN> <num triplets> [debug]\n"
 	       "\n");
@@ -1311,6 +1312,8 @@ int main(int argc, char *argv[])
 	struct extra_radius_attr *p = NULL, *p1;
 	const char *ifname = "test";
 	const char *ctrl_iface = NULL;
+	const char *user = NULL;
+	const char *pass = NULL;
 
 	if (os_program_init())
 		return -1;
@@ -1326,7 +1329,7 @@ int main(int argc, char *argv[])
 	wpa_debug_show_keys = 1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:A:c:C:ei:M:nN:o:p:P:r:R:s:St:T:vW");
+		c = getopt(argc, argv, "a:A:c:C:ei:M:nN:o:p:P:r:R:s:St:T:vWu:z:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1426,6 +1429,12 @@ int main(int argc, char *argv[])
 			p->syntax = pos[0];
 			p->data = pos + 2;
 			break;
+		case 'u':
+			user = optarg;
+			break;
+		case 'z':
+			pass = optarg;
+			break;
 		default:
 			usage();
 			return -1;
@@ -1463,8 +1472,17 @@ int main(int argc, char *argv[])
 	eapol_test.wpa_s = &wpa_s;
 	dl_list_init(&wpa_s.bss);
 	dl_list_init(&wpa_s.bss_id);
-	if (conf)
+	if (conf) {
 		wpa_s.conf = wpa_config_read(conf, NULL);
+		if (user) {
+			wpa_s.conf->ssid->eap.identity = (unsigned char *) os_strdup(user);
+			wpa_s.conf->ssid->eap.identity_len = os_strlen(user);
+		}
+		if (pass) {
+			wpa_s.conf->ssid->eap.password = (unsigned char *) os_strdup(pass);
+			wpa_s.conf->ssid->eap.password_len = os_strlen(pass);
+		}
+	}
 	else
 		wpa_s.conf = wpa_config_alloc_empty(ctrl_iface, NULL);
 	if (wpa_s.conf == NULL) {
